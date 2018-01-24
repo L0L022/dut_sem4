@@ -10,6 +10,9 @@ include_directories(${SFML_INCLUDE_DIR})
 find_package(OpenGL REQUIRED)
 include_directories(${OPENGL_INCLUDE_DIR})
 
+find_package(GLUT REQUIRED)
+include_directories(${GLUT_INCLUDE_DIR})
+
 add_subdirectory(synthese_image_1)
 add_subdirectory(synthese_image_2)
 
