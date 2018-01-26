@@ -157,9 +157,10 @@ private:
     Vector3f _vitesse;
     float _taille;
     float _vie;
+    float _vie_max;
 
 public:
-    Bouffee(Vector3f position, Vector3f vitesse, float taille, float vie) : _position(position), _vitesse(vitesse), _taille(taille), _vie(vie) {
+    Bouffee(Vector3f position, Vector3f vitesse, float taille, float vie) : _position(position), _vitesse(vitesse), _taille(taille), _vie(vie), _vie_max(vie) {
     }
 
     void anime(float temps) {
@@ -173,10 +174,7 @@ public:
         glDisable(GL_CULL_FACE);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glEnable(GL_BLEND);
-
-        glPushMatrix();
-        //glTranslatef(_position.x, _position.y, _position.z);
-//        std::cout << _position.y << std::endl;
+        glColor4f(1, 1, 1, _vie/_vie_max);
 
         float t = _taille / 2.f;
 
@@ -192,19 +190,18 @@ public:
 
         Vector3f A, B, C, D;
 
-        A.x = xpos + Haut.x - Droite.x;
-        A.y = ypos + Haut.y - Droite.y;
-        A.z = zpos + Haut.z - Droite.z;
-        B.x = xpos + Haut.x + Droite.x;
-        B.y = ypos + Haut.y + Droite.y;
-        B.z = zpos + Haut.z + Droite.z;
-        C.x = xpos - Haut.x + Droite.x;
-        C.y = ypos - Haut.y + Droite.y;
-        C.z = zpos - Haut.z + Droite.z;
-
-        D.x = xpos - Haut.x - Droite.x;
-        D.y = ypos - Haut.y - Droite.y;
-        D.z = zpos - Haut.z - Droite.z;
+        A.x = _position.x + Haut.x - Droite.x;
+        A.y = _position.y + Haut.y - Droite.y;
+        A.z = _position.z + Haut.z - Droite.z;
+        B.x = _position.x + Haut.x + Droite.x;
+        B.y = _position.y + Haut.y + Droite.y;
+        B.z = _position.z + Haut.z + Droite.z;
+        C.x = _position.x - Haut.x + Droite.x;
+        C.y = _position.y - Haut.y + Droite.y;
+        C.z = _position.z - Haut.z + Droite.z;
+        D.x = _position.x - Haut.x - Droite.x;
+        D.y = _position.y - Haut.y - Droite.y;
+        D.z = _position.z - Haut.z - Droite.z;
 
         Vector3f vertices[4] = {A, B, C, D};
         ((vertices[1] - vertices[0]) ^ (vertices[2] - vertices[0])).normalize().glNormal();
@@ -218,8 +215,6 @@ public:
             glTexCoord2f(1.0f,0.0f);
             vertices[3].glVertex();
         glEnd();
-
-        glPopMatrix();
 
         glDisable(GL_BLEND);
         glEnable(GL_LIGHTING);
