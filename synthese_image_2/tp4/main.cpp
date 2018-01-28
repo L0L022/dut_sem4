@@ -111,7 +111,7 @@ GLvoid callback_display()
 	// On re-spécifie la position des sources de lumière avec pour qu'elles
 	// soient aussi affectées par la translation et la rotation qu'on vient
 	// d'appliquer à la scène.
-	glLightfv(GL_LIGHT0, GL_POSITION,Light0Position);
+    glLightfv(GL_LIGHT0, GL_POSITION,Light0Position);
 
 	// On affiche la scène.
 	affiche_scene();
