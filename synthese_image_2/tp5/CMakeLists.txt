@@ -1,0 +1,11 @@
+set(SRC main.cpp objet3d.cpp structgeom.cpp)
+add_executable(synt_2_tp5 ${SRC})
+target_link_libraries(synt_2_tp5 ${GLUT_LIBRARIES} ${OPENGL_LIBRARIES})
+
+configure_file(visage_colere.off visage_colere.off COPYONLY)
+configure_file(visage_degout.off visage_degout.off COPYONLY)
+configure_file(visage_joie.off visage_joie.off COPYONLY)
+configure_file(visage_normal.off visage_normal.off COPYONLY)
+configure_file(visage_peur.off visage_peur.off COPYONLY)
+configure_file(visage_surprise.off visage_surprise.off COPYONLY)
+configure_file(visage_tristesse.off visage_tristesse.off COPYONLY)
