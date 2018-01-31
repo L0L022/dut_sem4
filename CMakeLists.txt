@@ -13,6 +13,9 @@ include_directories(${OPENGL_INCLUDE_DIR})
 find_package(GLUT REQUIRED)
 include_directories(${GLUT_INCLUDE_DIR})
 
+find_package(OpenSceneGraph COMPONENTS osgDB osgViewer osgText osgShadow osgParticle osgGA REQUIRED)
+include_directories(${OPENSCENEGRAPH_INCLUDE_DIRS})
+
 add_subdirectory(synthese_image_1)
 add_subdirectory(synthese_image_2)
-
+add_subdirectory(moteurs_3D)
