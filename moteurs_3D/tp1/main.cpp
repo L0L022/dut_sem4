@@ -4,13 +4,35 @@
 #include <osg/PositionAttitudeTransform>
 #include <osgGA/NodeTrackerManipulator>
 #include <osgGA/GUIEventHandler>
+#include <iostream>
+
+class SearchNode : public osg::NodeVisitor
+{
+public:
+    SearchNode(const std::string &name) : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN), _name(name) {}
+
+    virtual void apply(osg::Node &n) {
+        if (n.getName() == _name)
+            _node = &n;
+        else
+            traverse(n);
+    }
+
+    inline osg::Node *node() const { return _node; }
+
+protected:
+    std::string _name;
+    osg::ref_ptr<osg::Node> _node;
+};
 
 class EventHandler : public osgGA::GUIEventHandler
 {
 public:
-    EventHandler(osg::ref_ptr<osg::StateSet> state) : _state(state) {}
+    EventHandler(osg::ref_ptr<osg::StateSet> state, osg::ref_ptr<osg::Node> scene) : _state(state), _scene(scene), move_name(" ") {}
 
     virtual bool handle(const osgGA::GUIEventAdapter &ea, osgGA::GUIActionAdapter &aa) {
+        auto direction = osg::Vec3d{0, 0, 0};
+
         switch (ea.getEventType()) {
         case osgGA::GUIEventAdapter::KEYDOWN:
             switch (ea.getKey()) {
@@ -20,13 +42,51 @@ public:
             case '2':
                 switchLight(GL_LIGHT2);
                 break;
+            case 'b':
+                move_name = "patBox";
+                break;
+            case 's':
+                move_name = "patSphere";
+                break;
+            case 'c':
+                move_name = "patCone";
+                break;
+            case osgGA::GUIEventAdapter::KEY_Up:
+                direction[1] += 1;
+                break;
+            case osgGA::GUIEventAdapter::KEY_Down:
+                direction[1] -= 1;
+                break;
+            case osgGA::GUIEventAdapter::KEY_Right:
+                direction[0] += 1;
+                break;
+            case osgGA::GUIEventAdapter::KEY_Left:
+                direction[0] -= 1;
+                break;
+            case osgGA::GUIEventAdapter::KEY_Page_Up:
+                direction[2] += 1;
+                break;
+            case osgGA::GUIEventAdapter::KEY_Page_Down:
+                direction[2] -= 1;
+                break;
             default:
                 break;
             }
             break;
+
         default:
             break;
         }
+
+        SearchNode search(move_name);
+        _scene->accept(search);
+        auto n = search.node();
+        if (n != nullptr) {
+            auto pos = n->asTransform()->asPositionAttitudeTransform()->getPosition();
+            n->asTransform()->asPositionAttitudeTransform()->setPosition(pos + direction);
+        }
+
+        return false;
     }
 
 private:
@@ -36,6 +96,8 @@ private:
 
 private:
     osg::ref_ptr<osg::StateSet> _state;
+    osg::ref_ptr<osg::Node> _scene;
+    std::string move_name;
 };
 
 int main(int argc, char *argv[])
@@ -43,7 +105,6 @@ int main(int argc, char *argv[])
     osg::DisplaySettings::instance()->setNumMultiSamples(8);
 
     osg::ref_ptr<osg::Shape> shapeBox = new osg::Box({0, 0, 0}, 2, 3, 4);
-    shapeBox->setName("shapeBox");
     osg::ref_ptr<osg::Material> materialBox = new osg::Material;
     materialBox->setAmbient(osg::Material::FRONT_AND_BACK, {0.5, 0, 0, 1});
     materialBox->setDiffuse(osg::Material::FRONT_AND_BACK, {0.9, 0, 0, 1});
@@ -60,7 +121,6 @@ int main(int argc, char *argv[])
     patBox->addChild(geodeBox);
 
     osg::ref_ptr<osg::Shape> shapeSphere = new osg::Sphere({0, 0, 0}, 1);
-    shapeSphere->setName("shapeSphere");
     osg::ref_ptr<osg::Material> materialSphere = new osg::Material;
     materialSphere->setAmbient(osg::Material::FRONT_AND_BACK, {0.5, 0.5, 0, 1});
     materialSphere->setDiffuse(osg::Material::FRONT_AND_BACK, {1, 1, 0, 1});
@@ -77,7 +137,6 @@ int main(int argc, char *argv[])
     patSphere->addChild(geodeSphere);
 
     osg::ref_ptr<osg::Shape> shapeCone = new osg::Cone({0, 0, 0}, 1, 2);
-    shapeCone->setName("shapeCone");
     osg::ref_ptr<osg::Material> materialCone = new osg::Material;
     materialCone->setAmbient(osg::Material::FRONT_AND_BACK, {0.5, 0, 0.5, 1});
     materialCone->setDiffuse(osg::Material::FRONT_AND_BACK, {1, 0, 1, 1});
@@ -126,7 +185,7 @@ int main(int argc, char *argv[])
     manip->setTrackNode(geodeCone);
     manip->setTrackerMode(osgGA::NodeTrackerManipulator::NODE_CENTER);
 
-    osg::ref_ptr<EventHandler> eventHandler = new EventHandler(state);
+    osg::ref_ptr<EventHandler> eventHandler = new EventHandler(state, scene);
 
     osgViewer::Viewer viewer;
     viewer.setUpViewInWindow(100, 50, 800, 600);
