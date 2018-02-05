@@ -15,6 +15,7 @@
 #include <osgShadow/ShadowMap>
 #include <osgShadow/SoftShadowMap>
 #include <osgGA/DriveManipulator>
+#include <osg/NodeCallback>
 #include <iostream>
 #include <random>
 
@@ -78,6 +79,20 @@ private:
     osg::ref_ptr<osg::Node> _scene;
 };
 
+class VelocityTextCallback : public osg::NodeCallback
+{
+public:
+    VelocityTextCallback(osgText::Text * text, osgGA::DriveManipulator * driveManip) : _text(text), _driveManip(driveManip) {}
+
+    virtual void operator ()(osg::Node * n, osg::NodeVisitor * nv) {
+        _text->setText(std::to_string(_driveManip->getVelocity()));
+    }
+
+private:
+    osgText::Text * _text;
+    osgGA::DriveManipulator * _driveManip;
+};
+
 osg::Group* creation_troupeau(int nb_vaches, float taillex, float tailley)
 {
     std::random_device rd;
@@ -126,9 +141,27 @@ osg::Node* creation_sol(float taillex, float tailley)
     return geode.release();
 }
 
-osg::Node* creation_HUD()
+osg::Node* creation_HUD(osgGA::DriveManipulator * driveManip)
 {
+    osg::ref_ptr<osgText::Text> text = new osgText::Text;
+    text->setPosition({50.0, 50.0, 0.0});
+    text->setText("du texte !");
+    text->setCharacterSize(20);
+    text->setFont("NotoSans-Regular.ttf");
+
+    osg::ref_ptr<osg::Geode> geode = new osg::Geode;
+    geode->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    geode->addDrawable(text);
+    geode->addUpdateCallback(new VelocityTextCallback(text, driveManip));
+
     osg::ref_ptr<osg::Camera> camera = new osg::Camera;
+    camera->setProjectionMatrix(osg::Matrix::ortho2D(0, 1280, 0, 1024));
+    camera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+    camera->setViewMatrix(osg::Matrix::identity());
+    camera->setClearMask(GL_DEPTH_BUFFER_BIT);
+    camera->setRenderOrder(osg::Camera::POST_RENDER);
+    camera->addChild(geode);
+
     return camera.release();
 }
 
@@ -180,9 +213,12 @@ int main(int argc, char *argv[])
     precip->setParticleSpeed(0.4);
     precip->snow(0.3);
 
+    osg::ref_ptr<osgGA::DriveManipulator> manip = new osgGA::DriveManipulator;
+
     osg::ref_ptr<osg::Group> scene = new osg::Group;
     scene->addChild(shadowedScene);
     scene->addChild(precip);
+    scene->addChild(creation_HUD(manip));
 
     osg::ref_ptr<osg::Fog> fog = new osg::Fog;
 //    fog->setMode(osg::Fog::LINEAR);
@@ -203,8 +239,6 @@ int main(int argc, char *argv[])
 //    manip->setTrackNode(vaches);
 //    manip->setTrackerMode(osgGA::NodeTrackerManipulator::NODE_CENTER);
 
-    osg::ref_ptr<osgGA::DriveManipulator> manip = new osgGA::DriveManipulator;
-
     osg::ref_ptr<EventHandler> eventHandler = new EventHandler(state, scene);
 
     osg::ref_ptr<osg::Camera> cam1 = new osg::Camera;
@@ -224,7 +258,7 @@ int main(int argc, char *argv[])
 
     osgViewer::Viewer::Windows windows;
     viewer.getWindows(windows);
-    windows[0]->setWindowName("TP 2");
+    windows[0]->setWindowName("TP 3");
 
     return viewer.run();
 }
