@@ -9,6 +9,12 @@
 #include <osgViewer/ViewerEventHandlers>
 #include <osg/Switch>
 #include <osg/Camera>
+#include <osg/Fog>
+#include <osgParticle/PrecipitationEffect>
+#include <osgShadow/ShadowedScene>
+#include <osgShadow/ShadowMap>
+#include <osgShadow/SoftShadowMap>
+#include <osgGA/DriveManipulator>
 #include <iostream>
 #include <random>
 
@@ -104,13 +110,13 @@ osg::Group* creation_troupeau(int nb_vaches, float taillex, float tailley)
 osg::Node* creation_sol(float taillex, float tailley)
 {
     osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D;
-    texture->setImage(osgDB::readImageFile("herbe.jpg"));
+    texture->setImage(osgDB::readImageFile("snow.jpg"));
     texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
     texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
     texture->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
     texture->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
 
-    osg::ref_ptr<osg::Geometry> quad = osg::createTexturedQuadGeometry({0.f, 0.f, 0.f}, {taillex, 0.f, 0.f}, {0.f, tailley, 0.f}, 0.f, 0.f, 1.f, 1.f);
+    osg::ref_ptr<osg::Geometry> quad = osg::createTexturedQuadGeometry({0.f, 0.f, 0.f}, {taillex, 0.f, 0.f}, {0.f, tailley, 0.f}, 0.f, 0.f, 5.f, 5.f);
     quad->getOrCreateStateSet()->setTextureAttributeAndModes(0, texture);
     quad->getOrCreateStateSet()->setMode(GL_DEPTH_TEST, osg::StateAttribute::ON);
 
@@ -120,11 +126,17 @@ osg::Node* creation_sol(float taillex, float tailley)
     return geode.release();
 }
 
+osg::Node* creation_HUD()
+{
+    osg::ref_ptr<osg::Camera> camera = new osg::Camera;
+    return camera.release();
+}
+
 int main(int argc, char *argv[])
 {
     osg::DisplaySettings::instance()->setNumMultiSamples(8);
 
-    osg::ref_ptr<osg::Group> vaches = creation_troupeau(1000, 100, 100);
+    osg::ref_ptr<osg::Group> vaches = creation_troupeau(100, 100, 100);
 
     osg::ref_ptr<osg::Switch> switchNode = new osg::Switch;
     switchNode->setName("switch");
@@ -134,25 +146,64 @@ int main(int argc, char *argv[])
 
     osg::ref_ptr<osg::LightSource> light1 = new osg::LightSource;
     light1->getLight()->setLightNum(1);
-    light1->getLight()->setPosition({0, 0, 1, 0});
+    light1->getLight()->setPosition({0, 1, 1, 0});
     light1->getLight()->setAmbient({0.5, 0.5, 0.5, 1});
     light1->getLight()->setDiffuse({1, 1, 1, 1});
     light1->getLight()->setSpecular({0.2, 0.2, 0.2, 1});
 
+    osg::ref_ptr<osg::LightSource> light2 = new osg::LightSource;
+    light2->getLight()->setLightNum(2);
+    light2->getLight()->setPosition({50, 50, 10, 1});
+    light2->getLight()->setAmbient({0, 0.5, 0.5, 1});
+    light2->getLight()->setDiffuse({0, 1, 1, 1});
+    light2->getLight()->setSpecular({0.2, 0.2, 0.2, 1});
+    light2->getLight()->setLinearAttenuation(0.01);
+
     osg::ref_ptr<osg::Group> lights = new osg::Group;
-    lights->addChild(light1);
+    //lights->addChild(light1);
+    lights->addChild(light2);
+
+//    osg::ref_ptr<osgShadow::ShadowMap> st = new osgShadow::ShadowMap;
+//    st->setAmbientBias({0.9, 1-0.9});
+//    st->setTextureSize({4096, 4096});
+    osg::ref_ptr<osgShadow::SoftShadowMap> st = new osgShadow::SoftShadowMap;
+    st->setSoftnessWidth(0.001);
+
+    osg::ref_ptr<osgShadow::ShadowedScene> shadowedScene = new osgShadow::ShadowedScene;
+    shadowedScene->setShadowTechnique(st);
+    shadowedScene->addChild(lights);
+    shadowedScene->addChild(sol);
+    shadowedScene->addChild(switchNode);
+
+    osg::ref_ptr<osgParticle::PrecipitationEffect> precip = new osgParticle::PrecipitationEffect;
+    precip->setWind({0, 0, -1});
+    precip->setParticleSpeed(0.4);
+    precip->snow(0.3);
 
     osg::ref_ptr<osg::Group> scene = new osg::Group;
-    scene->addChild(lights);
-    scene->addChild(switchNode);
-    scene->addChild(sol);
+    scene->addChild(shadowedScene);
+    scene->addChild(precip);
+
+    osg::ref_ptr<osg::Fog> fog = new osg::Fog;
+//    fog->setMode(osg::Fog::LINEAR);
+    fog->setMode(osg::Fog::EXP2);
+    fog->setDensity(0.005);
+    fog->setColor({0.7, 0.7, 0.7, 1.0});
+    fog->setStart(10);
+    fog->setEnd(800);
 
     osg::ref_ptr<osg::StateSet> state = scene->getOrCreateStateSet();
-    state->setMode(GL_LIGHT1, osg::StateAttribute::ON);
+    state->setMode(GL_LIGHT0, osg::StateAttribute::OFF);
+    //state->setMode(GL_LIGHT1, osg::StateAttribute::ON);
+    state->setMode(GL_LIGHT2, osg::StateAttribute::ON);
+    state->setAttribute(fog, osg::StateAttribute::ON);
+    //state->setMode(GL_FOG, osg::StateAttribute::ON);
 
-    osg::ref_ptr<osgGA::NodeTrackerManipulator> manip = new osgGA::NodeTrackerManipulator;
-    manip->setTrackNode(vaches);
-    manip->setTrackerMode(osgGA::NodeTrackerManipulator::NODE_CENTER);
+//    osg::ref_ptr<osgGA::NodeTrackerManipulator> manip = new osgGA::NodeTrackerManipulator;
+//    manip->setTrackNode(vaches);
+//    manip->setTrackerMode(osgGA::NodeTrackerManipulator::NODE_CENTER);
+
+    osg::ref_ptr<osgGA::DriveManipulator> manip = new osgGA::DriveManipulator;
 
     osg::ref_ptr<EventHandler> eventHandler = new EventHandler(state, scene);
 
@@ -168,6 +219,7 @@ int main(int argc, char *argv[])
     viewer.addEventHandler(eventHandler);
     viewer.addEventHandler(new osgViewer::StatsHandler);
     viewer.setRunMaxFrameRate(30.0);
+    viewer.setCameraManipulator(manip);
     viewer.setUpViewInWindow(100, 50, 800, 600);
 
     osgViewer::Viewer::Windows windows;
