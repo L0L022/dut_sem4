@@ -18,8 +18,73 @@
 #include <osg/NodeCallback>
 #include <osgUtil/LineSegmentIntersector>
 #include <osg/TexMat>
+#include <osgSim/DOFTransform>
+#include <osgParticle/SmokeEffect>
 #include <iostream>
 #include <random>
+
+class SearchNode : public osg::NodeVisitor
+{
+public:
+    SearchNode(const std::string &name) : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN), _name(name) {}
+
+    virtual void apply(osg::Node &n) {
+        if (n.getName() == _name)
+            _node = &n;
+        else
+            traverse(n);
+    }
+
+    inline osg::Node *node() const { return _node; }
+
+protected:
+    std::string _name;
+    osg::ref_ptr<osg::Node> _node;
+};
+
+class EventHandler : public osgGA::GUIEventHandler
+{
+public:
+    EventHandler(osg::ref_ptr<osg::StateSet> state, osg::ref_ptr<osg::Node> scene) : _state(state), _scene(scene) {}
+
+    virtual bool handle(const osgGA::GUIEventAdapter &ea, osgGA::GUIActionAdapter &aa) {
+        switch (ea.getEventType()) {
+        case osgGA::GUIEventAdapter::KEYDOWN:
+            switch (ea.getKey()) {
+            case 'a':
+                turnTurret(-2.f);
+                break;
+            case 'z':
+                turnTurret(2.f);
+                break;
+            default:
+                break;
+            }
+            break;
+        default:
+            break;
+        }
+
+        return false;
+    }
+
+private:
+    void turnTurret(float degree) {
+        SearchNode searchTourelle("turret");
+        _scene->accept(searchTourelle);
+        osg::Node * noeudTourelle = searchTourelle.node();
+        if (noeudTourelle) {
+            osgSim::DOFTransform * tourelleDOF = dynamic_cast<osgSim::DOFTransform*>(noeudTourelle);
+            auto hpr = tourelleDOF->getCurrentHPR();
+            hpr[0] += osg::DegreesToRadians(degree);
+            tourelleDOF->setCurrentHPR(hpr);
+        }
+    }
+
+private:
+    osg::ref_ptr<osg::StateSet> _state;
+    osg::ref_ptr<osg::Node> _scene;
+};
 
 osg::Node* creation_terrain()
 {
@@ -68,6 +133,45 @@ bool intersection_terrain(float x, float y, osg::Node * terrain, osg::Vec3 & pos
     }
     return false;
 }
+
+class AnimationTank : public osg::AnimationPathCallback
+{
+public:
+    AnimationTank(osg::AnimationPath * p, osg::Node * terrain, osg::Node * tank) : osg::AnimationPathCallback(p), _terrain(terrain), _tank(tank) {}
+
+    virtual void operator ()(osg::Node * n, osg::NodeVisitor * nv) {
+        osg::AnimationPathCallback::operator ()(n, nv);
+        osg::PositionAttitudeTransform * transform = dynamic_cast<osg::PositionAttitudeTransform*>(n);
+        if (transform) {
+            osg::Vec3f pos = transform->getPosition();
+            osg::Vec3f normale;
+
+            osg::Vec3f dir = pos - _lastPos;
+            // angle entre dir et x ou y puis rotate
+
+            intersection_terrain(pos.x(), pos.y(), _terrain, pos, normale);
+            osg::Quat rotate;
+            rotate.makeRotate({0, 0, 1}, normale);
+
+            transform->setPosition(pos);
+            transform->setAttitude(rotate);
+
+            SearchNode sSmoke("tank_smoke");
+            _tank->accept(sSmoke);
+            osgParticle::ParticleEffect * smoke = dynamic_cast<osgParticle::ParticleEffect*>(sSmoke.node());
+            if (smoke) {
+                smoke->setPosition(pos);
+            }
+
+            _lastPos = pos;
+        }
+    }
+
+private:
+    osg::Node * _terrain;
+    osg::Node * _tank;
+    osg::Vec3f _lastPos;
+};
 
 osg::Group * creation_foret(osg::Node * terrain, size_t nb_arbres)
 {
@@ -164,6 +268,8 @@ osg::Node * creation_tank(osg::Node * terrain)
     std::uniform_real_distribution<float> disX(terrain->asGeode()->getBoundingBox().xMin(), terrain->asGeode()->getBoundingBox().xMax());
     std::uniform_real_distribution<float> disY(terrain->asGeode()->getBoundingBox().yMin(), terrain->asGeode()->getBoundingBox().yMax());
 
+    osg::ref_ptr<osg::Group> scene = new osg::Group;
+
     osg::ref_ptr<osg::Node> tank = osgDB::readNodeFile("t72-tank/t72-tank_des.flt");
 
     osg::Vec3 pos, normale;
@@ -172,12 +278,34 @@ osg::Node * creation_tank(osg::Node * terrain)
     osg::Quat rotation;
     rotation.makeRotate({0, 0, 1}, normale);
 
+    osg::ref_ptr<osg::AnimationPath> ap = new osg::AnimationPath;
+    ap->setLoopMode(osg::AnimationPath::SWING);
+
+    const size_t nb_points = 2;
+    for (size_t i = 0; i < nb_points; ++i) {
+        ap->insert(i/double(nb_points)*10, osg::AnimationPath::ControlPoint({disX(gen), disY(gen), 0}));
+    }
+
+    osg::ref_ptr<osg::AnimationPathCallback> apc = new AnimationTank(ap, terrain, scene);
+
     osg::ref_ptr<osg::PositionAttitudeTransform> pat = new osg::PositionAttitudeTransform;
     pat->setPosition(pos);
     pat->setAttitude(rotation);
     pat->addChild(tank);
+    pat->setUpdateCallback(apc);
 
-    return pat.release();
+    osg::ref_ptr<osgParticle::SmokeEffect> smoke = new osgParticle::SmokeEffect;
+    smoke->setName("tank_smoke");
+    smoke->setTextureFileName("smoke.png");
+    smoke->setIntensity(2);
+    smoke->setScale(4);
+    smoke->setPosition({50, 50, 50});
+    smoke->setEmitterDuration(9999999);
+
+    scene->addChild(pat);
+    scene->addChild(smoke);
+
+    return scene.release();
 }
 
 int main(int argc, char *argv[])
@@ -220,16 +348,19 @@ int main(int argc, char *argv[])
     cam1->setProjectionMatrixAsPerspective(30, 4.f/3.f, 0.1, 1000);
     cam1->setViewMatrixAsLookAt({0, -10, 10}, {0, 0, 0}, {0, 0, 1});
 
+    osg::ref_ptr<EventHandler> eventHandler = new EventHandler(state, scene);
+
     osgViewer::Viewer viewer;
     viewer.setCamera(cam1);
     viewer.setSceneData(scene);
+    viewer.addEventHandler(eventHandler);
     viewer.addEventHandler(new osgViewer::StatsHandler);
     viewer.setRunMaxFrameRate(30.0);
     viewer.setUpViewInWindow(100, 50, 800, 600);
 
     osgViewer::Viewer::Windows windows;
     viewer.getWindows(windows);
-    windows[0]->setWindowName("TP 4");
+    windows[0]->setWindowName("TP 5");
 
     return viewer.run();
 }
