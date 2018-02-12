@@ -99,7 +99,7 @@ osg::Node* creation_terrain()
     osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D;
     texture->setImage(osgDB::readImageFile("herbe.tga"));
     texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
-    texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+    texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
     texture->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
     texture->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
 
@@ -184,8 +184,8 @@ osg::Group * creation_foret(osg::Node * terrain, size_t nb_arbres)
 
     osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D;
     texture->setImage(osgDB::readImageFile("arbre.tga"));
-    texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
-    texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+    texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
+    texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
 
 
     osg::ref_ptr<osg::Group> foret = new osg::Group;
