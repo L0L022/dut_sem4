@@ -20,6 +20,7 @@
 #include <osg/TexMat>
 #include <osgSim/DOFTransform>
 #include <osgParticle/SmokeEffect>
+#include <osgParticle/ExplosionEffect>
 #include <iostream>
 #include <random>
 
@@ -45,7 +46,16 @@ protected:
 class EventHandler : public osgGA::GUIEventHandler
 {
 public:
-    EventHandler(osg::ref_ptr<osg::StateSet> state, osg::ref_ptr<osg::Node> scene) : _state(state), _scene(scene) {}
+    EventHandler(osg::ref_ptr<osg::StateSet> state, osg::ref_ptr<osg::Group> scene) : _state(state), _scene(scene), _degree(0) {
+        SearchNode searchTourelle("turret");
+        _scene->accept(searchTourelle);
+        _tourelleDOF = dynamic_cast<osgSim::DOFTransform*>(searchTourelle.node());
+
+        SearchNode searchTankPat("tank_pat");
+        _scene->accept(searchTankPat);
+        _tank_pat = dynamic_cast<osg::PositionAttitudeTransform *>(searchTankPat.node());
+
+    }
 
     virtual bool handle(const osgGA::GUIEventAdapter &ea, osgGA::GUIActionAdapter &aa) {
         switch (ea.getEventType()) {
@@ -56,6 +66,9 @@ public:
                 break;
             case 'z':
                 turnTurret(2.f);
+                break;
+            case 'f':
+                fire();
                 break;
             default:
                 break;
@@ -70,20 +83,38 @@ public:
 
 private:
     void turnTurret(float degree) {
-        SearchNode searchTourelle("turret");
-        _scene->accept(searchTourelle);
-        osg::Node * noeudTourelle = searchTourelle.node();
-        if (noeudTourelle) {
-            osgSim::DOFTransform * tourelleDOF = dynamic_cast<osgSim::DOFTransform*>(noeudTourelle);
-            auto hpr = tourelleDOF->getCurrentHPR();
-            hpr[0] += osg::DegreesToRadians(degree);
-            tourelleDOF->setCurrentHPR(hpr);
-        }
+        _degree += degree;
+
+        auto hpr = _tourelleDOF->getCurrentHPR();
+        hpr[0] = osg::DegreesToRadians(_degree);
+        _tourelleDOF->setCurrentHPR(hpr);
+    }
+
+    void fire() {
+        osg::ref_ptr<osgParticle::ExplosionEffect> effectNode = new osgParticle::ExplosionEffect;
+        effectNode->setTextureFileName("fire.png");
+        effectNode->setIntensity(2);
+        effectNode->setScale(4);
+
+        auto pos = _tank_pat->getPosition();
+        pos.y() += 10;
+
+        osg::ref_ptr<osg::PositionAttitudeTransform> pat = new osg::PositionAttitudeTransform;
+        pat->setPosition(pos);
+        pat->setAttitude(osg::Quat(osg::DegreesToRadians(_degree), osg::Vec3{0.f, 0.f, 1.f}));
+        //pat->addChild(effectNode->getParticleSystem());
+        pat->addChild(effectNode->getEmitter());
+
+        _scene->addChild(pat);
+        _scene->addChild(effectNode);
     }
 
 private:
     osg::ref_ptr<osg::StateSet> _state;
-    osg::ref_ptr<osg::Node> _scene;
+    osg::ref_ptr<osg::Group> _scene;
+    float _degree;
+    osgSim::DOFTransform * _tourelleDOF;
+    osg::PositionAttitudeTransform * _tank_pat;
 };
 
 osg::Node* creation_terrain()
@@ -99,7 +130,7 @@ osg::Node* creation_terrain()
     osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D;
     texture->setImage(osgDB::readImageFile("herbe.tga"));
     texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
-    texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
+    texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
     texture->setWrap(osg::Texture::WRAP_S, osg::Texture::REPEAT);
     texture->setWrap(osg::Texture::WRAP_T, osg::Texture::REPEAT);
 
@@ -185,7 +216,7 @@ osg::Group * creation_foret(osg::Node * terrain, size_t nb_arbres)
     osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D;
     texture->setImage(osgDB::readImageFile("arbre.tga"));
     texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
-    texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR_MIPMAP_LINEAR);
+    texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
 
 
     osg::ref_ptr<osg::Group> foret = new osg::Group;
@@ -289,6 +320,7 @@ osg::Node * creation_tank(osg::Node * terrain)
     osg::ref_ptr<osg::AnimationPathCallback> apc = new AnimationTank(ap, terrain, scene);
 
     osg::ref_ptr<osg::PositionAttitudeTransform> pat = new osg::PositionAttitudeTransform;
+    pat->setName("tank_pat");
     pat->setPosition(pos);
     pat->setAttitude(rotation);
     pat->addChild(tank);
