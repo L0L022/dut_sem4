@@ -126,16 +126,6 @@ private:
         _scene->addChild(effectNode);
     }
 
-    void fire() {
-        osg::ref_ptr<osgParticle::ExplosionEffect> explosion = new osgParticle::ExplosionEffect;
-        explosion->setName("tank_fire");
-        explosion->setTextureFileName("feu.png");
-        explosion->setIntensity(2);
-        explosion->setScale(4);
-        explosion->setPosition(osg::Vec3(10,20,0));
-        _scene->addChild(explosion);
-    }
-
 private:
     osg::ref_ptr<osg::StateSet> _state;
     osg::ref_ptr<osg::Group> _scene;
