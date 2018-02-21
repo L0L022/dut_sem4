@@ -20,6 +20,7 @@
 #include <osg/TexMat>
 #include <osgSim/DOFTransform>
 #include <osgParticle/SmokeEffect>
+#include <osgParticle/ExplosionEffect>
 #include <iostream>
 #include <random>
 
@@ -42,10 +43,27 @@ protected:
     osg::ref_ptr<osg::Node> _node;
 };
 
+class RemoveNodeByName : public osg::NodeVisitor
+{
+public:
+    RemoveNodeByName(const std::string &name) : _name(name) {}
+
+    virtual void apply(osg::Group &g) {
+        for (size_t i = 0; i < g.getNumChildren(); ++i)
+            if (g.getChild(i)->getName() == _name)
+                g.removeChild(i);
+
+        traverse(g);
+    }
+
+private:
+    std::string _name;
+};
+
 class EventHandler : public osgGA::GUIEventHandler
 {
 public:
-    EventHandler(osg::ref_ptr<osg::StateSet> state, osg::ref_ptr<osg::Node> scene) : _state(state), _scene(scene) {}
+    EventHandler(osg::ref_ptr<osg::StateSet> state, osg::ref_ptr<osg::Group> scene) : _state(state), _scene(scene) {}
 
     virtual bool handle(const osgGA::GUIEventAdapter &ea, osgGA::GUIActionAdapter &aa) {
         switch (ea.getEventType()) {
@@ -56,6 +74,9 @@ public:
                 break;
             case 'z':
                 turnTurret(2.f);
+                break;
+            case 'f':
+                fire();
                 break;
             default:
                 break;
@@ -81,9 +102,19 @@ private:
         }
     }
 
+    void fire() {
+        osg::ref_ptr<osgParticle::ExplosionEffect> explosion = new osgParticle::ExplosionEffect;
+        explosion->setName("tank_fire");
+        explosion->setTextureFileName("feu.png");
+        explosion->setIntensity(2);
+        explosion->setScale(4);
+        explosion->setPosition(osg::Vec3(10,20,0));
+        _scene->addChild(explosion);
+    }
+
 private:
     osg::ref_ptr<osg::StateSet> _state;
-    osg::ref_ptr<osg::Node> _scene;
+    osg::ref_ptr<osg::Group> _scene;
 };
 
 osg::Node* creation_terrain()
