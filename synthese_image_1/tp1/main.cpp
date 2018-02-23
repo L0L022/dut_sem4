@@ -10,11 +10,218 @@
 #include <iostream>
 #include <random>
 #include <memory>
+#include <algorithm>
+#include <functional>
 
 using namespace std;
 
 GLuint leVBO;
 size_t nb_vertices;
+
+template<typename T>
+using Vector3 = T[3];
+
+template<typename T>
+using ArrayVector3 = std::vector<Vector3<T>>;
+
+class Matrix {
+    template<typename T>
+    using Array = std::vector<T>;
+
+public:
+    using T = float;
+    using iterator = Array<T>::iterator;
+    using const_iterator = Array<T>::const_iterator;
+
+    Matrix()
+        : Matrix(1, 1)
+    {}
+
+    Matrix(size_t rows, size_t columns)
+        : _rows(0), _columns(0)
+    {
+        setSize(rows, columns);
+    }
+
+    Matrix(const Matrix &m) = default;
+
+    Matrix(Matrix &&m)
+        : _rows(0), _columns(0)
+    {
+        std::swap(_rows, m._rows);
+        std::swap(_columns, m._columns);
+        std::swap(_elements, m._elements);
+    }
+
+    inline size_t rows() const { return _rows; }
+    inline size_t columns() const { return _columns; }
+    inline size_t size() const { return _rows * _columns; }
+
+    inline const T &element(const size_t row, const size_t column) const {
+        return _elements[indexOfElement(row, column)];
+    }
+    inline T &element(const size_t row, const size_t column) {
+        return _elements[indexOfElement(row, column)];
+    }
+
+    bool operator==(const Matrix &m) const {
+        return _rows == m._rows and _columns == m._columns and _elements == m._elements;
+    }
+
+    bool operator !=(const Matrix &m) const {
+        return !(*this == m);
+    }
+
+    iterator begin() { return _elements.begin(); }
+    const_iterator begin() const { return _elements.begin(); }
+    const_iterator cbegin() const { return _elements.cbegin(); }
+
+    iterator end() { return _elements.end(); }
+    const_iterator end() const { return _elements.end(); }
+    const_iterator cend() const { return _elements.cend(); }
+
+    Matrix operator+(const T &scalar) const {
+        Matrix m(*this);
+        addition(m, scalar);
+        return m;
+    }
+
+    Matrix &operator+=(const T &scalar) {
+        addition(*this, scalar);
+        return *this;
+    }
+
+    Matrix operator+(const Matrix &matrix) const {
+        Matrix m(*this);
+        addition(m, matrix);
+        return m;
+    }
+
+    Matrix &operator+=(const Matrix &matrix) {
+        addition(*this, matrix);
+        return *this;
+    }
+
+    Matrix operator-(const T &scalar) const {
+        Matrix m(*this);
+        substraction(m, scalar);
+        return m;
+    }
+
+    Matrix &operator-=(const T &scalar) {
+        substraction(*this, scalar);
+        return *this;
+    }
+
+    Matrix operator-(const Matrix &matrix) const {
+        Matrix m(*this);
+        substraction(m, matrix);
+        return m;
+    }
+
+    Matrix &operator-=(const Matrix &matrix) {
+        substraction(*this, matrix);
+        return *this;
+    }
+
+    Matrix operator*(const T &scalar) const {
+        Matrix m(*this);
+        multiplication(m, scalar);
+        return m;
+    }
+
+    Matrix &operator*=(const T &scalar) {
+        multiplication(*this, scalar);
+        return *this;
+    }
+
+    Matrix operator/(const T &scalar) const {
+        Matrix m(*this);
+        division(m, scalar);
+        return m;
+    }
+
+    Matrix &operator/=(const T &scalar) {
+        division(*this, scalar);
+        return *this;
+    }
+
+private:
+    inline size_t indexOfElement(const size_t row, const size_t column) const {
+        if (1 <= row and row <= _rows and 1 <= column and column <= _columns)
+            return (row - 1) * _rows + (column - 1);
+        else
+            throw std::runtime_error("Matrix : row or column out of bounds.");
+    }
+
+    void setSize(const size_t rows, const size_t columns) {
+        if (rows < 1 or columns < 1)
+            throw std::runtime_error("Matrix : rows or columns are inferior to zero.");
+
+        _rows = rows;
+        _columns = columns;
+        _elements.resize(size()); // ne coupe pas la matrice comme on pourrait le penser
+    }
+
+    static void transform(Matrix &m, std::function<T(const T&, size_t, size_t)> op) {
+        for (size_t i = 1; i <= m.rows(); ++i)
+            for (size_t j = 1; j <= m.columns(); ++j)
+                m.element(i, j) = op(m.element(i, j), i, j);
+    }
+
+    static void checkSameDimension(const Matrix &m1, const Matrix &m2) {
+        if (m1.rows() != m2.rows() or m1.columns() != m2.columns())
+            throw std::runtime_error("Matrix : the two matrix must have the same dimension.");
+    }
+
+    static void addition(Matrix &m, const T &scalar) {
+        transform(m, [&scalar](const T &e, size_t, size_t) {
+            return e + scalar;
+        });
+    }
+
+    static void addition(Matrix &m1, const Matrix &m2) {
+        checkSameDimension(m1, m2);
+        transform(m1, [&m2](const T& e, size_t i, size_t j) {
+            return e + m2.element(i, j);
+        });
+    }
+
+    static void substraction(Matrix &m, const T &scalar) {
+        transform(m, [&scalar](const T &e, size_t, size_t) {
+            return e - scalar;
+        });
+    }
+
+    static void substraction(Matrix &m1, const Matrix &m2) {
+        checkSameDimension(m1, m2);
+        transform(m1, [&m2](const T& e, size_t i, size_t j) {
+            return e - m2.element(i, j);
+        });
+    }
+
+    static void multiplication(Matrix &m, const T &scalar) {
+        transform(m, [&scalar](const T &e, size_t, size_t) {
+            return e * scalar;
+        });
+    }
+
+    static void division(Matrix &m, const T &scalar) {
+        transform(m, [&scalar](const T &e, size_t, size_t) {
+            return e / scalar;
+        });
+    }
+
+private:
+    size_t _rows;
+    size_t _columns;
+    std::vector<T> _elements;
+};
+
+class Geometry {
+public:
+
+};
 
 static void RenderScene()
 {
