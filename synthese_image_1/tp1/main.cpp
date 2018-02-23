@@ -11,6 +11,9 @@
 #include <random>
 #include <memory>
 
+#include <SuperOpenGL/SuperOpenGL.hpp>
+#include <SuperOpenGL/Window.hpp>
+
 using namespace std;
 
 GLuint leVBO;
@@ -31,12 +34,6 @@ static void RenderScene()
 	glDisableClientState(GL_VERTEX_ARRAY); //plus besoin de vertexArray
 
 	glutSwapBuffers();
-}
-
-
-static void InitializeGlutCallbacks()
-{
-	glutDisplayFunc(RenderScene);
 }
 
 static void CreateVertexBufferStar()
@@ -106,32 +103,43 @@ void CreateVertexBufferRandom(const size_t nb_points)
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 3 * nb_points, vertices.get(), GL_STATIC_DRAW);
 }
 
+class MainWindow : public SuperOpenGL::Window {
+public:
+    MainWindow() : SuperOpenGL::Window("TP1 : quelques points")
+    {}
+
+protected:
+    void display() {
+        RenderScene();
+    }
+};
+
 int main(int argc, char** argv)
 {
-	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGBA);
-	glutInitWindowSize(500, 500);
-	glutInitWindowPosition(100, 100);
-	glutCreateWindow("TP1 : quelques points");
+    SuperOpenGL::init(argc, argv);
+    //toujours après l'initialisation de glut
+    GLenum res = glewInit();
+    if (res != GLEW_OK) {
+        cerr << "Error: " << glewGetErrorString(res) << endl;
+        return (EXIT_FAILURE);
+    }
 
-	InitializeGlutCallbacks();
+    MainWindow window;
+    window.setPosition(200, 200);
+    window.resize(500, 500);
+    CreateVertexBufferRandom(100);
 
-	//toujours après l'initialisation de glut
-	GLenum res = glewInit();
+    MainWindow w2;
+    MainWindow w3;
 
-	if (res != GLEW_OK) {
-		cerr << "Error: " << glewGetErrorString(res) << endl;
-		return (EXIT_FAILURE);
-	}
 
 	//cout << "Using GLEW Version: " << glewGetString(GLEW_VERSION);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
 //	CreateVertexBufferStar();
-    CreateVertexBufferRandom(10);
 
-	glutMainLoop();
+    SuperOpenGL::mainLoop();
 
 	return (EXIT_SUCCESS);
 }
