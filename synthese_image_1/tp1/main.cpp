@@ -24,21 +24,21 @@ using Vector3 = T[3];
 template<typename T>
 using ArrayVector3 = std::vector<Vector3<T>>;
 
+template<typename T>
 class Matrix {
-    template<typename T>
-    using Array = std::vector<T>;
+    template<typename U>
+    using Array = std::vector<U>;
 
 public:
-    using T = float;
-    using iterator = Array<T>::iterator;
-    using const_iterator = Array<T>::const_iterator;
+    using iterator = typename Array<T>::iterator;
+    using const_iterator = typename Array<T>::const_iterator;
 
     Matrix()
         : Matrix(1, 1)
     {}
 
     Matrix(size_t rows, size_t columns)
-        : _rows(0), _columns(0)
+        : _fixed(false), _rows(0), _columns(0)
     {
         setSize(rows, columns);
     }
@@ -53,6 +53,8 @@ public:
         std::swap(_elements, m._elements);
     }
 
+    Matrix& operator=(const Matrix &m) = default;
+
     inline size_t rows() const { return _rows; }
     inline size_t columns() const { return _columns; }
     inline size_t size() const { return _rows * _columns; }
@@ -63,6 +65,9 @@ public:
     inline T &element(const size_t row, const size_t column) {
         return _elements[indexOfElement(row, column)];
     }
+
+    inline T * elements() { return _elements.data(); }
+    inline const T * elements() const { return _elements.data(); }
 
     bool operator==(const Matrix &m) const {
         return _rows == m._rows and _columns == m._columns and _elements == m._elements;
@@ -135,6 +140,17 @@ public:
         return *this;
     }
 
+    Matrix operator*(const Matrix &matrix) const {
+        Matrix m(*this);
+        multiplication(m, matrix);
+        return m;
+    }
+
+    Matrix &operator*=(const Matrix &matrix) {
+        multiplication(*this, matrix);
+        return *this;
+    }
+
     Matrix operator/(const T &scalar) const {
         Matrix m(*this);
         division(m, scalar);
@@ -155,6 +171,9 @@ private:
     }
 
     void setSize(const size_t rows, const size_t columns) {
+        if (_fixed)
+            throw std::runtime_error("Matrix : the change of dimension is forbidden.");
+
         if (rows < 1 or columns < 1)
             throw std::runtime_error("Matrix : rows or columns are inferior to zero.");
 
@@ -206,16 +225,39 @@ private:
         });
     }
 
+    static void multiplication(Matrix &m1, const Matrix &m2) {
+        if (m1.columns() != m2.rows())
+            throw std::runtime_error("Matrix : error with dimension");
+        Matrix m(m1.rows(), m2.columns());
+        transform(m, [&m1, &m2](const T& e, size_t i, size_t j) {
+            T r = m1.element(i, 1) * m2.element(1, j);
+            for (size_t k = 2; k < m1.columns(); ++k)
+                r += m1.element(i, k) * m2.element(k, j);
+            return r;
+
+        });
+        m1 = m;
+    }
+
     static void division(Matrix &m, const T &scalar) {
         transform(m, [&scalar](const T &e, size_t, size_t) {
             return e / scalar;
         });
     }
 
+protected:
+    bool _fixed;
+
 private:
     size_t _rows;
     size_t _columns;
     std::vector<T> _elements;
+};
+
+template<typename T, size_t dimension>
+class Vector : Matrix<T> {
+public:
+    Vector() : Matrix<T>(), _fixed(true) {}
 };
 
 class Geometry {
@@ -337,6 +379,8 @@ int main(int argc, char** argv)
 
 //	CreateVertexBufferStar();
     CreateVertexBufferRandom(10);
+
+    Matrix<float> m;
 
 	glutMainLoop();
 
