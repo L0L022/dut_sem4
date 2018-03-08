@@ -4,12 +4,14 @@
 #include <iostream>
 #include <string>
 #include <map>
+#include <chrono>
 
 namespace SuperOpenGL {
 
 class Window {
 public:
     Window(const std::string &title);
+    virtual ~Window();
 
     inline std::string title() const { return _title; }
     void setTitle(const std::string &title);
@@ -28,9 +30,19 @@ public:
 
 protected:
     virtual void display() {}
+    virtual void reshape(size_t width, size_t height) {}
+    virtual void keyPressed(unsigned char key, int x, int y) {}
+    virtual void specialKeyPressed(int key, int x, int y) {}
+    virtual void update(const float elaspedTime) {}
 
 private:
     static void displayCallback();
+    static void reshapeCallback(int width, int height);
+    static void keyboardCallback(unsigned char key, int x, int y);
+    static void specialCallback(int key, int x, int y);
+    static void timerCallback(int);
+
+    void timer();
 
 private:
     static std::map<int, Window *> _instances;
@@ -38,6 +50,9 @@ private:
     size_t _posX, _posY;
     size_t _width, _height;
     std::string _title;
+    float _updateFreq;
+    float _elapsedTime;
+    std::chrono::system_clock::time_point _lastTimer;
 };
 
 }

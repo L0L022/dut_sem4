@@ -4,7 +4,7 @@
 #include <iostream>
 
 namespace SuperOpenGL {
-
+/*
 class Vector;
 
 class Vertex
@@ -46,7 +46,7 @@ public:
   friend std::ostream& operator<<(std::ostream&, const Vertex&);
   friend std::istream& operator>>(std::istream&, Vertex&);
 };
-
+*/
 } // namespace lib
 
 #endif

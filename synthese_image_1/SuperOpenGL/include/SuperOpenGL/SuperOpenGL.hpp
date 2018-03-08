@@ -2,8 +2,6 @@
 #define SUPEROPENGL_SUPEROPENGL_HPP
 
 namespace SuperOpenGL {
-    void init(int argc, char** argv);
-    void mainLoop();
 }
 
 #endif
