@@ -1,5 +1,6 @@
 //2016 R. RAFFIN, IUT Aix-Marseille, dept. Informatique - Arles
 //TP simple, affichages de quelques points
+//Loïc Escales
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -29,13 +30,13 @@ public:
 
 protected:
     void display() {
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
         glEnableClientState(GL_VERTEX_ARRAY);
         glBindBuffer(GL_ARRAY_BUFFER, _VBO);
         glVertexPointer(3, GL_FLOAT, 0, 0);
 
-        glDrawArrays(GL_POINTS, 0, _verticesCount);
+        glDrawArrays(GL_LINE_LOOP, 0, _verticesCount);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         glDisableClientState(GL_VERTEX_ARRAY);
@@ -67,8 +68,7 @@ private:
     }
 
     void initStar() {
-        std::vector<SOGL::Vector3f> vertices{{0.f,    0.f,    0.f},
-                                             {0.25f,  0.25f,  0.f},
+        std::vector<SOGL::Vector3f> vertices{{0.25f,  0.25f,  0.f},
                                              {0.f,    0.9f,   0.f},
                                              {-0.25f, 0.25f,  0.f},
                                              {-0.9f,  0.f,    0.f},

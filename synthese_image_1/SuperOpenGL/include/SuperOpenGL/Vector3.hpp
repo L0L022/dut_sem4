@@ -6,53 +6,6 @@
 #include <cmath>
 
 namespace SuperOpenGL {
-/*
-template<typename T>
-class Vector3 : public Vector<T, 3>
-{
-public:
-    Vector3() = default;
-    Vector3(const T x, const T y, const T z) {
-        this->x() = x;
-        this->y() = y;
-        this->z() = z;
-    }
-    Vector3(std::initializer_list<T> l) : Vector<T, 3>(l) {}
-    Vector3(const Vector3 &v) = default;
-    Vector3(Vector3 &&v) = default;
-
-    Vector3& operator=(const Vector3 &v) = default;
-    Vector3& operator=(std::initializer_list<T> l) {
-        Vector<T, 3>::operator=(l);
-        return *this;
-    }
-
-    T &x() { return this->element(1, 1); }
-    const T &x() const { return this->element(1, 1); }
-
-    T &y() { return this->element(2, 1); }
-    const T &y() const { return this->element(2, 1); }
-
-    T &z() { return this->element(3, 1); }
-    const T &z() const { return this->element(3, 1); }
-
-    Vector3& operator^=(const Vector3& v) {
-        crossProduct(*this, v);
-        return *this;
-    }
-
-    Vector3 operator^(const Vector3& v) const {
-        Vector3 r(*this);
-        crossProduct(r, v);
-        return r;
-    }
-
-private:
-    static void crossProduct(Vector3 &v1, const Vector3 &v2) {
-        v1 = {v1.y() * v2.z() - v1.z() * v2.y(), v1.z() * v2.x() - v1.x() * v2.z(), v1.x() * v2.y() - v1.y() * v2.x()};
-    }
-};
-*/
 
 template <typename T>
 class Vector3

@@ -1,5 +1,6 @@
 //2016 R. RAFFIN, IUT Aix-Marseille, dept. Informatique - Arles
 //TP simple, affichages de quelques points
+//Loïc Escales
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -15,7 +16,7 @@ namespace SOGL = SuperOpenGL;
 class MainWindow : public SOGL::Window {
 public:
     MainWindow()
-        : SOGL::Window("TP2 : couleurs, transformations, caméras")
+        : SOGL::Window("TP2 : couleurs, transformations, cameras")
         , _angle(0.f)
         , _isOrtho(true)
         , _showTeapot(true)
@@ -36,7 +37,7 @@ protected:
         glLoadIdentity();
 
         if (_isOrtho) {
-            glOrtho(-1.f, 1.f, -1.f, 1.f, -100.f, 100.f);
+            glOrtho(-2.f, 2.f, -2.f, 2.f, -100.f, 100.f);
             glRotatef(_orthoAngle, _orthoVec.x, _orthoVec.y, _orthoVec.z);
         } else {
             gluPerspective(45.f, width()/float(height()), 0.1f, 100.f);
@@ -50,7 +51,11 @@ protected:
 
         if (_showTeapot) {
             glColor3f(0.2, 0.5, 0.3);
-            glutWireTeapot(0.5);
+
+            if (!_isOrtho)
+                glRotatef(_angle, 0, 1, 0);
+
+            glutWireTeapot(1);
         } else {
             glColor3f(1.0, 0.0, 0.0);
 
@@ -103,13 +108,9 @@ protected:
         _angle += 1.f;
     }
 
-    void reshape(size_t width, size_t height) {
-        glViewport(0, 0, width, height);
-    }
-
 private:
     void initVertexBuffer() {
-        SOGL::RegularTetrahedronGeometry geo({0.f, 0.f, 0.f}, 0.5);
+        SOGL::RegularTetrahedronGeometry geo({0.f, 0.f, 0.f}, 1);
         _vertexBufferSize = geo.verticesCount();
 
         glGenBuffers(1, &_vertexBuffer);
@@ -149,6 +150,13 @@ private:
     float _orthoAngle;
     SOGL::Vector3f _orthoVec;
 };
+
+// Actions des touches
+// v: alterner entre projection orthogonale et projection perspective
+// t: alterner entre le tétraèdre régulier et la théière
+// a: vue de face
+// z: vue de côté
+// e: vue du dessus
 
 int main(int argc, char** argv)
 {

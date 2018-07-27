@@ -19,6 +19,7 @@ Window::Window(const std::string &title)
     glutReshapeFunc(&Window::reshapeCallback);
     glutKeyboardFunc(&Window::keyboardCallback);
     glutSpecialFunc(&Window::specialCallback);
+    glutMotionFunc(&Window::motionCallback);
     glutTimerFunc(_updateFreq, &Window::timerCallback, 0);
 }
 
@@ -60,6 +61,11 @@ void Window::setPosition(const size_t x, const size_t y)
     glutPositionWindow(_posX, _posY);
 }
 
+void Window::reshaped(size_t width, size_t height)
+{
+    glViewport(0, 0, width, height);
+}
+
 void Window::displayCallback()
 {
     _instances[glutGetWindow()]->display();
@@ -80,9 +86,21 @@ void Window::specialCallback(int key, int x, int y)
     _instances[glutGetWindow()]->specialKeyPressed(key, x, y);
 }
 
+void Window::motionCallback(int x, int y)
+{
+    _instances[glutGetWindow()]->mouseMoved(x, y);
+}
+
 void Window::timerCallback(int)
 {
     _instances[glutGetWindow()]->timer();
+}
+
+void Window::reshape(size_t width, size_t height)
+{
+    _width = width;
+    _height = height;
+    reshaped(width, height);
 }
 
 void Window::timer()

@@ -30,9 +30,10 @@ public:
 
 protected:
     virtual void display() {}
-    virtual void reshape(size_t width, size_t height) {}
+    virtual void reshaped(size_t width, size_t height);
     virtual void keyPressed(unsigned char key, int x, int y) {}
     virtual void specialKeyPressed(int key, int x, int y) {}
+    virtual void mouseMoved(int x, int y) {}
     virtual void update(const float elaspedTime) {}
 
 private:
@@ -40,8 +41,10 @@ private:
     static void reshapeCallback(int width, int height);
     static void keyboardCallback(unsigned char key, int x, int y);
     static void specialCallback(int key, int x, int y);
+    static void motionCallback(int x, int y);
     static void timerCallback(int);
 
+    void reshape(size_t width, size_t height);
     void timer();
 
 private:
